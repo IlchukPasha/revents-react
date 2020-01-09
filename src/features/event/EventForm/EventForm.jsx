@@ -26,7 +26,6 @@ class EventForm extends Component {
   };
 
   componentDidMount() {
-    console.log('------------------------ In did mount');
     if (this.props.selectedEvent) {
       this.setState({
         ...this.props.selectedEvent
