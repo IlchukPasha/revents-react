@@ -10,6 +10,7 @@ class NavBar extends Component {
   };
 
   handleSignIn = () => this.setState({ authenticated: true });
+
   handleSignOut = () => {
     this.setState({ authenticated: false });
     this.props.history.push('/');
@@ -26,6 +27,7 @@ class NavBar extends Component {
           </Menu.Item>
           <Menu.Item as={NavLink} to='/events' name='Events' />
           <Menu.Item as={NavLink} to='/people' name='People' />
+          <Menu.Item as={NavLink} to='/test' name='Test' />
           <Menu.Item>
             <Button
               as={Link}
