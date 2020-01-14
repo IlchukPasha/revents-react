@@ -1,7 +1,14 @@
+/* global google */
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { reduxForm, Field } from 'redux-form';
-import { combineValidators, composeValidators, isRequired, hasLengthGreaterThan } from 'revalidate';
+import { geocodeByAddress, getLatLng } from 'react-places-autocomplete';
+import {
+  combineValidators,
+  composeValidators,
+  isRequired,
+  hasLengthGreaterThan
+} from 'revalidate';
 import { Segment, Form, Button, Grid, Header } from 'semantic-ui-react';
 import { createEvent, updateEvent } from '../eventActions';
 import cuid from 'cuid';
@@ -9,6 +16,7 @@ import TextInput from '../../../app/common/form/TextInput';
 import SelectInput from '../../../app/common/form/SelectInput';
 import TextArea from '../../../app/common/form/TextArea';
 import DateInput from '../../../app/common/form/DateInput';
+import PlaceInput from '../../../app/common/form/PlaceInput';
 
 const mapStateToProps = (state, ownProps) => {
   const eventId = ownProps.match.params.id;
@@ -39,7 +47,9 @@ const validate = combineValidators({
   category: isRequired({ message: 'The category is required' }),
   description: composeValidators(
     isRequired({ message: 'Description is required' }),
-    hasLengthGreaterThan(4)({ message: 'Description needs to be at least 5 characters' })
+    hasLengthGreaterThan(4)({
+      message: 'Description needs to be at least 5 characters'
+    })
   )(),
   city: isRequired('city'),
   venue: isRequired('venue'),
@@ -47,7 +57,13 @@ const validate = combineValidators({
 });
 
 class EventForm extends Component {
+  state = {
+    cityLatLng: {},
+    venueLatLng: {}
+  };
+
   onFormSubmit = values => {
+    values.venueLatLng = this.state.venueLatLng;
     if (this.props.initialValues.id) {
       this.props.updateEvent(values);
       this.props.history.push(`/events/${this.props.initialValues.id}`);
@@ -63,12 +79,51 @@ class EventForm extends Component {
     }
   };
 
+  handleCitySelect = selectedCity => {
+    geocodeByAddress(selectedCity)
+      .then(results => getLatLng(results[0]))
+      .then(latlng => {
+        this.setState({
+          cityLatLng: latlng
+        });
+      })
+      .then(() => {
+        this.props.change('city', selectedCity);
+      })
+  }
+
+  handleVenueSelect = selectedVenue => {
+    geocodeByAddress(selectedVenue)
+      .then(results => getLatLng(results[0]))
+      .then(latlng => {
+        this.setState({
+          venueLatLng: latlng
+        });
+      })
+      .then(() => {
+        this.props.change('venue', selectedVenue);
+      })
+  }
+
   render() {
-    const { history, initialValues, invalid, submitting, pristine } = this.props;
+    const {
+      history,
+      initialValues,
+      invalid,
+      submitting,
+      pristine
+    } = this.props;
     return (
       <Grid>
         <Grid.Column width={10}>
-          <Segment>
+          <Segment
+            style={{
+              marginTop: 0,
+              position: 'absolute',
+              zIndex: 1000,
+              width: '100%'
+            }}
+          >
             <Header sub color='teal' content='Event Details' />
             <Form
               onSubmit={this.props.handleSubmit(this.onFormSubmit)}
@@ -94,12 +149,20 @@ class EventForm extends Component {
               <Header sub color='teal' content='Event Location Details' />
               <Field
                 name='city'
-                component={TextInput}
+                component={PlaceInput}
+                options={{ types: ['(cities)'] }}
+                onSelect={this.handleCitySelect}
                 placeholder='Event City'
               />
               <Field
                 name='venue'
-                component={TextInput}
+                component={PlaceInput}
+                options={{
+                  location: new google.maps.LatLng(this.state.cityLatLng),
+                  radius: 1000,
+                  types: ['establishment']
+                }}
+                onSelect={this.handleVenueSelect}
                 placeholder='Event Venue'
               />
               <Field
@@ -110,7 +173,11 @@ class EventForm extends Component {
                 timeFormat='HH mm'
                 placeholder='Event Date'
               />
-              <Button disabled={invalid || submitting || pristine} positive type='submit'>
+              <Button
+                disabled={invalid || submitting || pristine}
+                positive
+                type='submit'
+              >
                 Submit
               </Button>
               <Button
